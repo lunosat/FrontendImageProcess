@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comparação de Suavização de Pele com glfx.js</title>
+    <script src="glfx.js"></script>
+    <style>
+      #drop_zone {
+        border: 2px dashed #bbb;
+        height: 200px;
+        line-height: 200px;
+        text-align: center;
+        font-size: 16px;
+        color: #bbb;
+        cursor: pointer;
+      }
+
+      #fileInput {
+        display: none;
+      }
+
+      #container {
+        position: relative;
+        width: 300px; /* tamanho máximo da imagem */
+        margin-top: 20px;
+        display: none;
+      }
+
+      #overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%; /* inicialmente 50% para mostrar metade da imagem */
+        height: 100%;
+        overflow: hidden;
+        transition: 0.4s;
+      }
+
+      #slider {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 2px;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.5);
+        cursor: ew-resize;
+      }
+
+      #slider img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 20px;
+        background-color: rgba(255, 255, 255, 0.5);
+        padding: 2px;
+        border-radius: 50px;
+      }
+
+      img {
+        /* max-width: 300px; */
+        vertical-align: middle;
+        width: 500px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="drop_zone">
+      Arraste e solte sua imagem aqui ou
+      <label for="fileInput">clique para selecionar</label>.
+    </div>
+    <input type="file" id="fileInput" accept="image/*" />
+
+    <div id="container">
+      <img id="baseImage" />
+      <div id="overlay">
+        <img id="overlayImage" />
+      </div>
+      <div id="slider"><img src="assets/arrow.svg" alt="" /></div>
+    </div>
+
+    <script>
+      const dropZone = document.getElementById("drop_zone");
+      const fileInput = document.getElementById("fileInput");
+      const baseImage = document.getElementById("baseImage");
+      const overlayImage = document.getElementById("overlayImage");
+      const overlay = document.getElementById("overlay");
+      const slider = document.getElementById("slider");
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = "#e0e0e0";
+      });
+
+      dropZone.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = "";
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.backgroundColor = "";
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          fileInput.files = files;
+          displayImage(fileInput.files[0]);
+        }
+      });
+
+      dropZone.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        if (fileInput.files.length > 0) {
+          displayImage(fileInput.files[0]);
+        }
+      });
+
+      let isSliding = false;
+      slider.addEventListener("mousedown", (e) => {
+        isSliding = true;
+        document.addEventListener("mousemove", slide);
+        document.addEventListener("mouseup", stopSliding);
+      });
+
+      function slide(e) {
+        if (isSliding) {
+          const rect = baseImage.getBoundingClientRect();
+          let left = e.clientX - rect.left;
+
+          // Limit the slider position between 0 and the width of the base image.
+          left = Math.max(0, Math.min(left, rect.width));
+          overlay.style.width = `${left}px`;
+          slider.style.left = `${left}px`;
+        }
+      }
+
+      function stopSliding() {
+        isSliding = false;
+        document.removeEventListener("mousemove", slide);
+        document.removeEventListener("mouseup", stopSliding);
+      }
+
+      function displayImage(file) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          baseImage.src = event.target.result;
+          baseImage.onload = function () {
+            applySmoothEffect(baseImage.src);
+          };
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function applySmoothEffect(imageSrc) {
+        const canvas = fx.canvas();
+        const image = new Image();
+        image.src = imageSrc;
+
+        image.onload = function () {
+          const texture = canvas.texture(image);
+
+          // Aplicar filtro para suavizar rugas e imperfeições
+          canvas
+            .draw(texture)
+            .denoise(30) // Suaviza a imagem
+            .update();
+
+          overlayImage.src = canvas.toDataURL();
+          document.getElementById("container").style.display = "block";
+        };
+      }
+    </script>
+  </body>
+</html>
