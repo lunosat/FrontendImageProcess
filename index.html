@@ -124,24 +124,29 @@
       });
 
       let isSliding = false;
-      slider.addEventListener("mousedown", (e) => {
+      slider.addEventListener("mousedown", startSliding);
+      slider.addEventListener("touchstart", startSliding);
+
+      function startSliding(e) {
+        e.preventDefault();
         isSliding = true;
         document.addEventListener("mousemove", slide);
-        document.addEventListener("mouseup", stopSliding);
-      });
-
-      slider.addEventListener("touchstart", (e) => {
-        isSliding = true;
         document.addEventListener("touchmove", slide);
-        document.addEventListener("touchend", stopSliding)
-      })
+        document.addEventListener("mouseup", stopSliding);
+        document.addEventListener("touchend", stopSliding);
+      }
 
       function slide(e) {
         if (isSliding) {
           const rect = baseImage.getBoundingClientRect();
-          let left = e.clientX - rect.left;
+          let left;
 
-          // Limit the slider position between 0 and the width of the base image.
+          if (e.type === "touchmove") {
+            left = e.touches[0].clientX - rect.left;
+          } else {
+            left = e.clientX - rect.left;
+          }
+
           left = Math.max(0, Math.min(left, rect.width));
           overlay.style.width = `${left}px`;
           slider.style.left = `${left}px`;
@@ -152,6 +157,8 @@
         isSliding = false;
         document.removeEventListener("mousemove", slide);
         document.removeEventListener("mouseup", stopSliding);
+        document.removeEventListener("touchmove", slide);
+        document.removeEventListener("touchend", stopSliding);
       }
 
       function displayImage(file) {
